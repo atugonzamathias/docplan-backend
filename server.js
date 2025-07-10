@@ -1,10 +1,13 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';  // ✅ Import cors
 import emergencyRoutes from './routes/emergency.routes.js';
 import './config/firebase.js';
 
 dotenv.config();
 const app = express();
+
+app.use(cors());           // ✅ Enable CORS
 app.use(express.json());
 
 app.use('/api/emergencies', emergencyRoutes);
