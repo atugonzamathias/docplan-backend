@@ -7,5 +7,6 @@ const router = express.Router();
 router.post('/trigger', triggerEmergency);
 router.patch('/:id/acknowledge', acknowledgeEmergency);
 router.patch('/:id/resolve', resolveEmergency);
+router.get('/active', getActiveEmergency);
 
 export default router;
