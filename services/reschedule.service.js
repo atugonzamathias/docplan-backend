@@ -4,6 +4,7 @@ import { shiftSlotTime } from '../utils/time.utils.js';
 export const rescheduleAppointments = async (doctorId, duration) => {
   const results = [];
   const now = new Date();
+
   const apptsSnap = await db.collection("appointments")
     .where("doctorId", "==", doctorId)
     .where("status", "==", "frozen")
@@ -13,6 +14,8 @@ export const rescheduleAppointments = async (doctorId, duration) => {
     const appt = doc.data();
     const [startStr] = appt.slotTime.split(" - ");
     const slotStart = new Date(`${appt.date}T${startStr}:00`);
+    const patientSnap = await db.collection("users").doc(appt.patientId).get();
+    const fcmToken = patientSnap.data().fcmToken;
 
     if (slotStart < now) {
       const newTime = shiftSlotTime(appt.slotTime, duration);
@@ -21,13 +24,22 @@ export const rescheduleAppointments = async (doctorId, duration) => {
         status: "rescheduled",
         updatedAt: new Date().toISOString()
       });
-      const patientSnap = await db.collection("users").doc(appt.patientId).get();
-      results.push({ patientId: appt.patientId, fcmToken: patientSnap.data().fcmToken, newTime });
+      results.push({
+        patientId: appt.patientId,
+        fcmToken,
+        newTime,
+        originalTime: appt.slotTime
+      });
     } else {
       await doc.ref.update({ status: "upcoming" });
-      const patientSnap = await db.collection("users").doc(appt.patientId).get();
-      results.push({ patientId: appt.patientId, fcmToken: patientSnap.data().fcmToken, newTime: appt.slotTime });
+      results.push({
+        patientId: appt.patientId,
+        fcmToken,
+        newTime: appt.slotTime,
+        originalTime: appt.slotTime
+      });
     }
   }
+
   return results;
 };

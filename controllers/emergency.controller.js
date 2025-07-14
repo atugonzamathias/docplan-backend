@@ -6,6 +6,7 @@ export const resolveEmergency = async (req, res) => {
   try {
     const emergencyId = req.params.id;
     const doctorId = req.body.doctorId;
+
     const emergencyRef = db.collection("emergencies").doc(emergencyId);
     const emergencySnap = await emergencyRef.get();
     if (!emergencySnap.exists) return res.status(404).send("Emergency not found");
@@ -22,13 +23,24 @@ export const resolveEmergency = async (req, res) => {
     });
 
     const affected = await rescheduleAppointments(doctorId, duration);
+
     for (const a of affected) {
-      await sendFCM(a.fcmToken, "Appointment Rescheduled", `New time: ${a.newTime}`, {
-        type: "reschedule",
-        new_time: a.newTime
-      });
+      const isRescheduled = a.newTime !== a.originalTime;
+
+      await sendFCM(
+        a.fcmToken,
+        isRescheduled ? "Appointment Rescheduled" : "Appointment Restored",
+        isRescheduled
+          ? `Your appointment has been rescheduled to ${a.newTime}.`
+          : `Your appointment is back to normal and scheduled at ${a.newTime}.`,
+        {
+          type: isRescheduled ? "reschedule" : "restored",
+          new_time: a.newTime
+        }
+      );
     }
-    res.status(200).send("Emergency resolved and appointments rescheduled.");
+
+    res.status(200).send("Emergency resolved and appointments updated.");
   } catch (error) {
     console.error(error);
     res.status(500).send("Error resolving emergency");
