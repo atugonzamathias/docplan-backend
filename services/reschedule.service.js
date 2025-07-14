@@ -1,7 +1,7 @@
 import { db } from "../config/firebase.js";
 import {
   getDurationInMs,
-  splitSlotTime,
+  shiftSlotTime,
   getDayNameFromDate,
 } from "../utils/time.utils.js";
 
