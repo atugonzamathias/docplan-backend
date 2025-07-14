@@ -9,41 +9,46 @@ export const resolveEmergency = async (req, res) => {
 
     const emergencyRef = db.collection("emergencies").doc(emergencyId);
     const emergencySnap = await emergencyRef.get();
-    if (!emergencySnap.exists) return res.status(404).send("Emergency not found");
+
+    if (!emergencySnap.exists) {
+      return res.status(404).send("Emergency not found");
+    }
 
     const emergency = emergencySnap.data();
     const start = new Date(emergency.startTime);
     const end = new Date();
     const duration = end.getTime() - start.getTime();
 
+    // ✅ Mark emergency as resolved
     await emergencyRef.update({
       resolved: true,
       endTime: end.toISOString(),
-      status: "resolved"
+      status: "resolved",
     });
 
-    const affected = await rescheduleAppointments(doctorId, duration);
+    // ✅ Reschedule affected appointments
+    const affectedAppointments = await rescheduleAppointments(doctorId, duration);
 
-    for (const a of affected) {
-      const isRescheduled = a.newTime !== a.originalTime;
+    for (const appointment of affectedAppointments) {
+      const isRescheduled = appointment.originalTime !== appointment.newTime;
 
       await sendFCM(
-        a.fcmToken,
+        appointment.fcmToken,
         isRescheduled ? "Appointment Rescheduled" : "Appointment Restored",
         isRescheduled
-          ? `Your appointment has been rescheduled to ${a.newTime}.`
-          : `Your appointment is back to normal and scheduled at ${a.newTime}.`,
+          ? `Your appointment has been rescheduled to ${appointment.newTime}.`
+          : `Your appointment remains scheduled at ${appointment.newTime}.`,
         {
           type: isRescheduled ? "reschedule" : "restored",
-          new_time: a.newTime
+          new_time: appointment.newTime,
         }
       );
     }
 
-    res.status(200).send("Emergency resolved and appointments updated.");
+    return res.status(200).send("Emergency resolved and appointments updated.");
   } catch (error) {
-    console.error(error);
-    res.status(500).send("Error resolving emergency");
+    console.error("❌ Error resolving emergency:", error);
+    return res.status(500).send("Error resolving emergency");
   }
 };
 
@@ -79,6 +84,6 @@ export const getActiveEmergency = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error checking active emergency:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 };
