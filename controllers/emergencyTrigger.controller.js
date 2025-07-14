@@ -16,10 +16,21 @@ export const triggerEmergency = async (req, res) => {
       status: "active"
     });
 
+    const emergencyId = emergencyRef.id; // ✅ Get the auto-generated ID
+
     const doctorSnap = await db.collection("users").doc(doctorId).get();
     const doctorToken = doctorSnap.data().fcmToken;
-    await sendFCM(doctorToken, "Emergency Alert", `Patient ${patientName} triggered an emergency.`, { type: "emergency" });
 
+    await sendFCM(
+      doctorToken,
+      "Emergency Alert",
+      `Patient ${patientName} triggered an emergency.`,
+      {
+        type: "emergency",
+        doctorId,
+        emergencyId, // ✅ Include it in case you want to expand later
+      }
+    );
     const now = new Date();
     const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     const apptSnap = await db.collection("appointments")
