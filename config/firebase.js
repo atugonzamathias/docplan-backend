@@ -1,7 +1,7 @@
 import admin from 'firebase-admin';
 
 // Parse Firebase credentials from the correct environment variable
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+const serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
 
 // Initialize Firebase Admin SDK
 admin.initializeApp({
