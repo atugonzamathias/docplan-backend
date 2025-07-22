@@ -14,4 +14,4 @@ admin.initializeApp({
 // Export Firestore and Messaging services
 export const db = admin.firestore();
 export const messaging = admin.messaging();
-export default admin;
+export { admin }; // ✅ Named export for compatibility with your import
