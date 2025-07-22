@@ -1,26 +1,43 @@
-import { db } from '../config/firebase.js';
+import { db, admin } from '../config/firebase.js'; // admin must be initialized in firebase.js
 
+// ✅ Get appointments within 2 hours for a doctor (excluding emergencies)
 export const getAppointmentsWithinTwoHours = async (doctorId) => {
   const now = new Date();
   const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-  const snapshot = await db.collection('appointments')
-    .where('doctorId', '==', doctorId)
-    .where('isEmergency', '!=', true)
-    .where('dateTime', '>=', now.toISOString())
-    .where('dateTime', '<=', twoHoursLater.toISOString())
-    .get();
+  try {
+    const snapshot = await db.collection('appointments')
+      .where('doctorId', '==', doctorId)
+      .where('isEmergency', '!=', true)
+      .where('dateTime', '>=', admin.firestore.Timestamp.fromDate(now))
+      .where('dateTime', '<=', admin.firestore.Timestamp.fromDate(twoHoursLater))
+      .get();
 
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error("Error fetching appointments within 2 hours:", error);
+    return []; // Fail-safe return
+  }
 };
 
+// ✅ Freeze appointments by setting status to 'frozen'
 export const freezeAppointments = async (appointments) => {
   const updates = appointments.map(appt =>
     db.collection('appointments').doc(appt.id).update({ status: 'frozen' })
   );
-  await Promise.all(updates);
+
+  try {
+    await Promise.all(updates);
+    console.log('Appointments successfully frozen');
+  } catch (error) {
+    console.error("Error freezing appointments:", error);
+  }
 };
 
+// ✅ Fetch patient FCM tokens from user documents
 export const getPatientFcmTokens = async (appointments) => {
   const tokens = [];
 
@@ -32,7 +49,7 @@ export const getPatientFcmTokens = async (appointments) => {
         tokens.push(user.fcmToken);
       }
     } catch (error) {
-      console.error(`Error fetching token for patient ${appt.patientId}:`, error);
+      console.error(`Error fetching FCM token for patient ${appt.patientId}:`, error);
     }
   }
 
