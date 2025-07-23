@@ -21,6 +21,10 @@ export const sendFCM = async (token, title, body, data = {}) => {
       },
     };
 
+    // ✅ Log the full message including appointmentId and type
+    console.log("🔔 Sending FCM with the following payload:");
+    console.log(JSON.stringify(message, null, 2));
+
     await messaging.send(message);
     console.log(`✅ FCM sent to ${token}`);
   } catch (error) {
