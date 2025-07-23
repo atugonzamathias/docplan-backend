@@ -22,23 +22,28 @@ const listenForEmergencies = () => {
         if (change.type === 'added') {
           const emergency = change.doc.data();
           const emergencyId = change.doc.id;
-
           const doctorId = emergency.doctorId;
           const patientName = emergency.patientName || 'A patient';
 
-          if (!doctorId) {
-            console.warn(`❗ Skipping emergency ${emergencyId} — missing doctorId`);
+          if (!doctorId || typeof doctorId !== 'string') {
+            console.warn(`❗ Skipping emergency ${emergencyId} — missing or invalid doctorId`);
             continue;
           }
 
           console.log(`🚑 Emergency triggered by ${patientName} for Doctor [${doctorId}]`);
 
           try {
-            // 1. Freeze upcoming appointments for this doctor
+            // ✅ STEP 1: Freeze appointments
             const appointments = await getAppointmentsWithinTwoHours(doctorId);
+            console.log(`🧊 Appointments to freeze: ${appointments.length}`);
+
+            if (appointments.length === 0) {
+              console.warn(`⚠️ No upcoming appointments found for doctor [${doctorId}]`);
+            }
+
             await freezeAppointments(appointments);
 
-            // 2. Notify affected patients
+            // ✅ STEP 2: Notify affected patients
             const patientTokens = await getPatientFcmTokens(appointments);
 
             if (patientTokens.length > 0) {
@@ -55,7 +60,7 @@ const listenForEmergencies = () => {
               console.log('ℹ️ No patient tokens found for appointments.');
             }
 
-            // 3. Notify the doctor
+            // ✅ STEP 3: Notify doctor
             const doctorSnap = await db.collection('users').doc(doctorId).get();
             const doctor = doctorSnap.data();
 
@@ -75,7 +80,7 @@ const listenForEmergencies = () => {
               console.warn(`⚠️ No FCM token found for doctor [${doctorId}].`);
             }
 
-            // 4. Optional: Mark the emergency as notified
+            // ✅ STEP 4: Mark emergency as notified
             await db.collection('appointments').doc(emergencyId).update({ notified: true });
             console.log(`✅ Marked emergency [${emergencyId}] as notified.`);
           } catch (err) {
