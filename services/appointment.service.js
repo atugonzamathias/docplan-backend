@@ -8,7 +8,7 @@ export const getAppointmentsWithinTwoHours = async (doctorId) => {
   try {
     const snapshot = await db.collection('appointments')
       .where('doctorId', '==', doctorId)
-      .where('isEmergency', '!=', true)
+      .where('isEmergency', '==', false) // ✅ Fix here
       .where('dateTime', '>=', admin.firestore.Timestamp.fromDate(now))
       .where('dateTime', '<=', admin.firestore.Timestamp.fromDate(twoHoursLater))
       .get();
@@ -19,7 +19,7 @@ export const getAppointmentsWithinTwoHours = async (doctorId) => {
     }));
   } catch (error) {
     console.error("Error fetching appointments within 2 hours:", error);
-    return []; // Fail-safe return
+    return [];
   }
 };
 
