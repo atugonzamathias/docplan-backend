@@ -10,18 +10,17 @@ export const sendFCM = async (token, title, body, data = {}) => {
       },
       data: {
         ...data,
-        click_action: 'FLUTTER_NOTIFICATION_CLICK', // Required for Flutter navigation
+        click_action: 'FLUTTER_NOTIFICATION_CLICK', // Required for Flutter nav
       },
       android: {
         priority: 'high',
         notification: {
-          sound: 'default',
-          channelId: 'high_importance_channel', // Must match Flutter config
+          sound: 'emergency_alarm', // ✅ Use your custom sound file (no extension)
+          channelId: 'emergency_alerts', // ✅ Must match the one in MainActivity.kt
         },
       },
     };
 
-    // ✅ Log the full message including appointmentId and type
     console.log("🔔 Sending FCM with the following payload:");
     console.log(JSON.stringify(message, null, 2));
 
