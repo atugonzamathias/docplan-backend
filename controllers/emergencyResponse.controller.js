@@ -88,6 +88,7 @@ export const resolveEmergency = async (req, res) => {
   const appointmentId = req.params.id;
 
   try {
+    // 🔹 1. Get appointment data
     const ref = db.collection('appointments').doc(appointmentId);
     const snapshot = await ref.get();
 
@@ -96,11 +97,35 @@ export const resolveEmergency = async (req, res) => {
     }
 
     const appointment = snapshot.data();
+    const doctorId = appointment.doctorId;
 
-    // Update appointment status
+    // 🔹 2. Update appointment status to 'resolved'
     await ref.update({ status: 'resolved' });
 
-    // Notify patient via FCM
+    // 🔹 3. Update the doctor's status to 'available'
+    const doctorQuery = await db.collection('doctors')
+      .where('userId', '==', doctorId)
+      .limit(1)
+      .get();
+
+    if (!doctorQuery.empty) {
+      const doctorDoc = doctorQuery.docs[0];
+      await doctorDoc.ref.update({ status: 'available' });
+    }
+
+    // 🔹 4. Update emergency document with same doctorId to 'resolved'
+    const emergencyQuery = await db.collection('emergencies')
+      .where('doctorId', '==', doctorId)
+      .where('status', '==', 'emergency') // Ensure it's the active one
+      .limit(1)
+      .get();
+
+    if (!emergencyQuery.empty) {
+      const emergencyDoc = emergencyQuery.docs[0];
+      await emergencyDoc.ref.update({ status: 'resolved' });
+    }
+
+    // 🔹 5. Notify patient via FCM
     const patientSnapshot = await db.collection('users').doc(appointment.patientId).get();
     const patient = patientSnapshot.data();
 
@@ -117,7 +142,7 @@ export const resolveEmergency = async (req, res) => {
       );
     }
 
-    return res.status(200).json({ message: 'Emergency resolved' });
+    return res.status(200).json({ message: 'Emergency resolved and all statuses updated.' });
   } catch (error) {
     console.error('Error resolving emergency:', error);
     return res.status(500).json({ message: 'Server error' });
