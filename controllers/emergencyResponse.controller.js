@@ -116,7 +116,7 @@ export const resolveEmergency = async (req, res) => {
     // 🔹 4. Update emergency document with same doctorId to 'resolved'
     const emergencyQuery = await db.collection('emergencies')
       .where('doctorId', '==', doctorId)
-      .where('status', '==', 'emergency') // Ensure it's the active one
+      .where('status', '==', 'active') // Ensure it's the active one
       .limit(1)
       .get();
 
